@@ -74,7 +74,10 @@ class LogisticRegression(LinearModel):
         learning_rate (float): keep it at the default value for your plots
         """
         # Q1.1b
-        raise NotImplementedError
+        y_hat = 1 / (1 + np.exp(-self.W.dot(x_i)))
+        self.W += learning_rate * (y_i - y_hat) * x_i
+
+        #raise NotImplementedError
 
 
 class MLP(object):
