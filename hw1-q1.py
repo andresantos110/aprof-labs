@@ -53,17 +53,11 @@ class Perceptron(LinearModel):
         y_i (scalar): the gold label for that example
         other arguments are ignored
         """
-        # Q1.1a
-        y_hat = 1 if np.any(self.W.dot(x_i), 0) else -1
+        y_hat = self.predict(x_i)
+        
         if y_hat != y_i:
-            self.W += y_i * x_i
-
-        # calcular y hat
-        # se diferente, mistake => atualizar w
-        # w += learning rate? (1) * y * x
-        #return w?
-
-        #raise NotImplementedError
+            self.W[y_i] +=  x_i
+            self.W[y_hat ] -=  x_i
 
 
 class LogisticRegression(LinearModel):
@@ -73,11 +67,14 @@ class LogisticRegression(LinearModel):
         y_i: the gold label for that example
         learning_rate (float): keep it at the default value for your plots
         """
-        # Q1.1b
-        y_hat = 1 / (1 + np.exp(-self.W.dot(x_i)))
-        self.W += learning_rate * (y_i - y_hat) * x_i
 
-        #raise NotImplementedError
+        label_scores = self.W.dot(x_i)[:, None]
+        y_one_hot = np.zeros((np.size(self.W, 0), 1))
+        y_one_hot[y_i] = 1
+        label_probabilities = np.exp(label_scores) / np.sum(np.exp(label_scores))
+        self.W += learning_rate * (y_one_hot - label_probabilities) * x_i[None, :]
+
+
 
 
 class MLP(object):
