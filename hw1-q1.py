@@ -81,7 +81,7 @@ class MLP(object):
     # Q3.2b. This MLP skeleton code allows the MLP to be used in place of the
     # linear models with no changes to the training loop or evaluation code
     # in main().
-    def __init__(self, n_classes, n_features, hidden_size):
+    def __init__(self, n_classes, n_features, hidden_size, layers):
 
         units = [n_features, hidden_size, n_classes]
 
@@ -93,21 +93,20 @@ class MLP(object):
         self.weights = [self.weights1 , self.weights2]
         self.biases = [self.biases1 , self.biases2]
 
-    def ReLU(self ,x):
-        return x * (x > 0)
+    def ReLU(self, x):
+        return np.maximum(0.0, x)
 
-    def dReLU(x):
-        return 1. * (x > 0)
+    def dReLU(self, x):
+        return 1. * (x > 0.0)
 
     def forward(self, x, weights, biases):
         num_layers = len(weights)
-        g = self.ReLU()
         hiddens = []
         for i in range(num_layers):
             h = x if i == 0 else hiddens[i-1]
             z = weights[i].dot(h) + biases[i]
             if i < num_layers-1:  
-                hiddens.append(g(z))
+                hiddens.append(self.ReLU(z))
         output = z
         
         return output, hiddens
@@ -123,12 +122,15 @@ class MLP(object):
         return probs
 
     def compute_loss(self ,output, y, loss_function='cross_entropy'):
+        y_vect = np.zeros(10)
+        y_vect[y] = 1
         if loss_function == 'squared':
             y_pred = output
             loss = .5*(y_pred - y).dot(y_pred - y)
         elif loss_function == 'cross_entropy':
             probs = self.compute_label_probabilities(output)
-            loss = -y.dot(np.log(probs))
+            #print("log = " ,np.log(probs))
+            loss = -y_vect.dot(np.log(probs))
         return loss   
 
     def backward(self, x, y, output, hiddens, weights, loss_function='cross_entropy'):
@@ -160,15 +162,15 @@ class MLP(object):
         grad_biases.reverse()
         return grad_weights, grad_biases
 
-    def update_parameters(weights, biases, grad_weights, grad_biases, eta):
+    def update_parameters(self, weights, biases, grad_weights, grad_biases, eta):
         num_layers = len(weights)
         for i in range(num_layers):
             weights[i] -= eta*grad_weights[i]
             biases[i] -= eta*grad_biases[i]
 
-    def train_epoch(self, X, y, learning_rate=0.001):
+    def train_epoch(self, X, Y, learning_rate=0.001):
         total_loss = 0
-        for x, y in zip(X, y):
+        for x, y in zip(X, Y):
             output, hiddens = self.forward(x, self.weights, self.biases)
             loss = self.compute_loss(output, y, loss_function='cross_entropy')
             total_loss += loss
