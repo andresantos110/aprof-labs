@@ -82,14 +82,113 @@ class MLP(object):
     # linear models with no changes to the training loop or evaluation code
     # in main().
     def __init__(self, n_classes, n_features, hidden_size):
-        # Initialize an MLP with a single hidden layer.
-        raise NotImplementedError
+
+        units = [n_features, hidden_size, n_classes]
+
+        self.weights1 = np.random.normal(0.1,0.1,size=(units[1], units[0])) 
+        self.weights2 = np.random.normal(0.1,0.1,size=(units[2], units[1])) 
+        self.biases1 = np.zeros(units[1])
+        self.biases2 = np.zeros(units[2])
+
+        self.weights = [self.weights1 , self.weights2]
+        self.biases = [self.biases1 , self.biases2]
+
+    def ReLU(self ,x):
+        return x * (x > 0)
+
+    def dReLU(x):
+        return 1. * (x > 0)
+
+    def forward(self, x, weights, biases):
+        num_layers = len(weights)
+        g = self.ReLU()
+        hiddens = []
+        for i in range(num_layers):
+            h = x if i == 0 else hiddens[i-1]
+            z = weights[i].dot(h) + biases[i]
+            if i < num_layers-1:  
+                hiddens.append(g(z))
+        output = z
+        
+        return output, hiddens
+
+    def predict_label(self ,output):
+        
+        y_hat = np.zeros_like(output)
+        y_hat[np.argmax(output)] = 1
+        return y_hat
+
+    def compute_label_probabilities(self, output):
+        probs = np.exp(output) / np.sum(np.exp(output))
+        return probs
+
+    def compute_loss(self ,output, y, loss_function='cross_entropy'):
+        if loss_function == 'squared':
+            y_pred = output
+            loss = .5*(y_pred - y).dot(y_pred - y)
+        elif loss_function == 'cross_entropy':
+            probs = self.compute_label_probabilities(output)
+            loss = -y.dot(np.log(probs))
+        return loss   
+
+    def backward(self, x, y, output, hiddens, weights, loss_function='cross_entropy'):
+        num_layers = len(weights)
+        g = np.tanh
+        z = output
+        if loss_function == 'squared':
+            grad_z = z - y  # Grad of loss wrt last z.
+        elif loss_function == 'cross_entropy':
+            # softmax transformation.
+            probs = self.compute_label_probabilities(output)
+            grad_z = probs - y  # Grad of loss wrt last z.
+        grad_weights = []
+        grad_biases = []
+        for i in range(num_layers-1, -1, -1):
+            # Gradient of hidden parameters.
+            h = x if i == 0 else hiddens[i-1]
+            grad_weights.append(grad_z[:, None].dot(h[:, None].T))
+            grad_biases.append(grad_z)
+
+            # Gradient of hidden layer below.
+            grad_h = weights[i].T.dot(grad_z)
+
+            # Gradient of hidden layer below before activation.
+            assert(g == np.tanh)                # change to ReLU??
+            grad_z = grad_h * (1-h**2)   # Grad of loss wrt z3.
+
+        grad_weights.reverse()
+        grad_biases.reverse()
+        return grad_weights, grad_biases
+
+    def update_parameters(weights, biases, grad_weights, grad_biases, eta):
+        num_layers = len(weights)
+        for i in range(num_layers):
+            weights[i] -= eta*grad_weights[i]
+            biases[i] -= eta*grad_biases[i]
+
+    def train_epoch(self, X, y, learning_rate=0.001):
+        total_loss = 0
+        for x, y in zip(X, y):
+            output, hiddens = self.forward(x, self.weights, self.biases)
+            loss = self.compute_loss(output, y, loss_function='cross_entropy')
+            total_loss += loss
+            grad_weights, grad_biases = self.backward(x, y, output, hiddens, self.weights, loss_function='cross_entropy')
+            self.update_parameters(self.weights, self.biases, grad_weights, grad_biases, eta=learning_rate)
+        print("Total loss: %f" % total_loss)
+        return loss
 
     def predict(self, X):
         # Compute the forward pass of the network. At prediction time, there is
         # no need to save the values of hidden nodes, whereas this is required
         # at training time.
-        raise NotImplementedError
+        
+        predicted_labels = []
+        for x in X:
+            output, _ = self.forward(x, self.weights, self.biases)
+            y_hat = self.predict_label(output)
+            predicted_labels.append(y_hat)
+        predicted_labels = np.array(predicted_labels)
+        return predicted_labels
 
     def evaluate(self, X, y):
         """
@@ -101,10 +200,6 @@ class MLP(object):
         n_correct = (y == y_hat).sum()
         n_possible = y.shape[0]
         return n_correct / n_possible
-
-    def train_epoch(self, X, y, learning_rate=0.001):
-        raise NotImplementedError
-
 
 def plot(epochs, valid_accs, test_accs):
     plt.xlabel('Epoch')
