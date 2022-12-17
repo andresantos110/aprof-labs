@@ -118,7 +118,7 @@ class MLP(object):
         return y_hat
 
     def compute_label_probabilities(self, output):
-        probs = np.exp(output) / np.sum(np.exp(output))
+        probs = np.exp(output) / np.sum(np.exp(output))  
         return probs
 
     def compute_loss(self ,output, y, loss_function='cross_entropy'):
@@ -129,34 +129,29 @@ class MLP(object):
             loss = .5*(y_pred - y).dot(y_pred - y)
         elif loss_function == 'cross_entropy':
             probs = self.compute_label_probabilities(output)
-            #print("log = " ,np.log(probs))
+            print("probs = " ,probs)
             loss = -y_vect.dot(np.log(probs))
         return loss   
 
-    def backward(self, x, y, output, hiddens, weights, loss_function='cross_entropy'):
+    def backward(self, x, y, output, hiddens, weights):
+        
         num_layers = len(weights)
-        g = np.tanh
-        z = output
-        if loss_function == 'squared':
-            grad_z = z - y  # Grad of loss wrt last z.
-        elif loss_function == 'cross_entropy':
-            # softmax transformation.
-            probs = self.compute_label_probabilities(output)
-            grad_z = probs - y  # Grad of loss wrt last z.
+
+        probs = np.exp(output) / np.sum(np.exp(output))  
+        grad_z = probs - y  
+
         grad_weights = []
         grad_biases = []
+        
         for i in range(num_layers-1, -1, -1):
-            # Gradient of hidden parameters.
+            
             h = x if i == 0 else hiddens[i-1]
             grad_weights.append(grad_z[:, None].dot(h[:, None].T))
             grad_biases.append(grad_z)
-
-            # Gradient of hidden layer below.
             grad_h = weights[i].T.dot(grad_z)
-
-            # Gradient of hidden layer below before activation.
-            assert(g == np.tanh)                # change to ReLU??
-            grad_z = grad_h * (1-h**2)   # Grad of loss wrt z3.
+            print(h.shape)
+            print(output.shape)
+            grad_z = np.inner(grad_h ,self.dReLU(h))
 
         grad_weights.reverse()
         grad_biases.reverse()
@@ -174,7 +169,7 @@ class MLP(object):
             output, hiddens = self.forward(x, self.weights, self.biases)
             loss = self.compute_loss(output, y, loss_function='cross_entropy')
             total_loss += loss
-            grad_weights, grad_biases = self.backward(x, y, output, hiddens, self.weights, loss_function='cross_entropy')
+            grad_weights, grad_biases = self.backward(x, y, output, hiddens, self.weights)
             self.update_parameters(self.weights, self.biases, grad_weights, grad_biases, eta=learning_rate)
         print("Total loss: %f" % total_loss)
         return loss
