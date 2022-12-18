@@ -97,15 +97,24 @@ class MLP(object):
         return np.maximum(0.0, x)
 
     def dReLU(self, x):
-        return 1. * (x > 0.0)
+        dReLU_vect = np.zeros(x.shape)
+        for i in range(len(dReLU_vect)):
+            if x[i] > 0:
+                dReLU_vect[i] = 1
+        return dReLU_vect
 
     def forward(self, x, weights, biases):
         num_layers = len(weights)
         hiddens = []
         for i in range(num_layers):
             h = x if i == 0 else hiddens[i-1]
+            h = np.reshape(h, (len(h), 1)) 
+            biases[i] = np.reshape(biases[i], (len(biases[i]), 1)) 
+            #print(weights[i].shape, h.shape, biases[i].shape)
             z = weights[i].dot(h) + biases[i]
-            if i < num_layers-1:  
+            
+            if i < num_layers-1: 
+                #print(self.ReLU(z).shape) 
                 hiddens.append(self.ReLU(z))
         output = z
         
@@ -117,28 +126,17 @@ class MLP(object):
         y_hat[np.argmax(output)] = 1
         return y_hat
 
-    def compute_label_probabilities(self, output):
-        probs = np.exp(output) / np.sum(np.exp(output))  
-        return probs
-
-    def compute_loss(self ,output, y, loss_function='cross_entropy'):
-        y_vect = np.zeros(10)
-        y_vect[y] = 1
-        if loss_function == 'squared':
-            y_pred = output
-            loss = .5*(y_pred - y).dot(y_pred - y)
-        elif loss_function == 'cross_entropy':
-            probs = self.compute_label_probabilities(output)
-            print("probs = " ,probs)
-            loss = -y_vect.dot(np.log(probs))
-        return loss   
-
     def backward(self, x, y, output, hiddens, weights):
         
         num_layers = len(weights)
+        #print(self.weights)
+        probs = np.exp(output-np.amax(output)) / np.sum(np.exp(output-np.amax(output)))  
+        y_vect = np.zeros(len(probs))
+        y_vect[y] = 1
+        y_vect = np.reshape(y_vect, (len(y_vect), 1)) 
+        grad_z = probs - y_vect  
 
-        probs = np.exp(output) / np.sum(np.exp(output))  
-        grad_z = probs - y  
+        #print(grad_z.shape, probs.shape, y_vect.shape)
 
         grad_weights = []
         grad_biases = []
@@ -146,12 +144,15 @@ class MLP(object):
         for i in range(num_layers-1, -1, -1):
             
             h = x if i == 0 else hiddens[i-1]
-            grad_weights.append(grad_z[:, None].dot(h[:, None].T))
+            h = np.reshape(h, (len(h), 1))
+
+            grad_weights.append(np.outer(grad_z,h))
             grad_biases.append(grad_z)
             grad_h = weights[i].T.dot(grad_z)
-            print(h.shape)
-            print(output.shape)
-            grad_z = np.inner(grad_h ,self.dReLU(h))
+
+            #print(grad_h.shape, (self.dReLU(h)).shape)
+
+            grad_z = np.multiply(grad_h ,self.dReLU(h))
 
         grad_weights.reverse()
         grad_biases.reverse()
@@ -164,15 +165,11 @@ class MLP(object):
             biases[i] -= eta*grad_biases[i]
 
     def train_epoch(self, X, Y, learning_rate=0.001):
-        total_loss = 0
         for x, y in zip(X, Y):
             output, hiddens = self.forward(x, self.weights, self.biases)
-            loss = self.compute_loss(output, y, loss_function='cross_entropy')
-            total_loss += loss
             grad_weights, grad_biases = self.backward(x, y, output, hiddens, self.weights)
             self.update_parameters(self.weights, self.biases, grad_weights, grad_biases, eta=learning_rate)
-        print("Total loss: %f" % total_loss)
-        return loss
+        return 
 
     def predict(self, X):
         # Compute the forward pass of the network. At prediction time, there is
