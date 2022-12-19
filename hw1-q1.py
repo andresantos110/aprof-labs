@@ -191,6 +191,7 @@ class MLP(object):
         """
         # Identical to LinearModel.evaluate()
         y_hat = self.predict(X)
+        y_hat = np.argmax(y_hat, axis=1)
         n_correct = (y == y_hat).sum()
         n_possible = y.shape[0]
         return n_correct / n_possible
