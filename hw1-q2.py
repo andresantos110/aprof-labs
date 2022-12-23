@@ -46,7 +46,9 @@ class FeedforwardNetwork(nn.Module):
             self.activation = nn.Tanh()
 
         self.f1 = nn.Linear(n_features, hidden_size)
-        self.f2 = nn.Linear(hidden_size, n_classes)
+        self.f2 = nn.Linear(hidden_size, hidden_size)
+        self.f3 = nn.Linear(hidden_size, hidden_size)
+        self.f4 = nn.Linear(hidden_size, n_classes)
 
     def forward(self, x, **kwargs):
 
@@ -54,6 +56,12 @@ class FeedforwardNetwork(nn.Module):
         out = self.activation(out)
         out = self.dropout(out)
         out = self.f2(out)
+        out = self.activation(out)
+        out = self.dropout(out)
+        out = self.f3(out)
+        out = self.activation(out)
+        out = self.dropout(out)
+        out = self.f4(out)
         return out
 
 
