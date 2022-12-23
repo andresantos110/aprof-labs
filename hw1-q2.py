@@ -19,7 +19,7 @@ class LogisticRegression(nn.Module):
 
         super(LogisticRegression, self).__init__()
         self.layer = nn.Linear(n_features, n_classes)
-        #self.activation = nn.Sigmoid()
+        self.activation = nn.Sigmoid()
 
     def forward(self, x, **kwargs):
         x = self.layer(x)
@@ -36,9 +36,7 @@ class FeedforwardNetwork(nn.Module):
         super(FeedforwardNetwork, self).__init__()
 
         #self.layers = nn.Sequential()
-
-        self.f1 = nn.Linear(n_features, hidden_size)
-
+        
         self.dropout =  nn.Dropout(p=dropout)
 
         if activation_type == 'relu':
@@ -47,13 +45,14 @@ class FeedforwardNetwork(nn.Module):
         elif activation_type == 'tanh':
             self.activation = nn.Tanh()
 
+        self.f1 = nn.Linear(n_features, hidden_size)
         self.f2 = nn.Linear(hidden_size, n_classes)
-        
 
     def forward(self, x, **kwargs):
 
         out = self.f1(x)
         out = self.activation(out)
+        out = self.dropout(out)
         out = self.f2(out)
         return out
 
@@ -66,7 +65,6 @@ def train_batch(X, y, model, optimizer, criterion, **kwargs):
     loss.backward()
     optimizer.step()
     return loss.item()  
-    
 
 
 def predict(model, X):
@@ -95,6 +93,7 @@ def plot(epochs, plottable, ylabel='', name=''):
     plt.ylabel(ylabel)
     plt.plot(epochs, plottable)
     plt.savefig('%s.pdf' % (name), bbox_inches='tight')
+    plt.show()
 
 
 def main():
@@ -105,11 +104,11 @@ def main():
     parser.add_argument('-epochs', default=20, type=int,
                         help="""Number of epochs to train for. You should not
                         need to change this value for your plots.""")
-    parser.add_argument('-batch_size', default=1, type=int,
+    parser.add_argument('-batch_size', default=16, type=int,
                         help="Size of training batch.")
-    parser.add_argument('-learning_rate', type=float, default=0.01)
+    parser.add_argument('-learning_rate', type=float, default=0.1)
     parser.add_argument('-l2_decay', type=float, default=0)
-    parser.add_argument('-hidden_sizes', type=int, default=100)
+    parser.add_argument('-hidden_size', type=int, default=200)
     parser.add_argument('-layers', type=int, default=1)
     parser.add_argument('-dropout', type=float, default=0.3)
     parser.add_argument('-activation',
