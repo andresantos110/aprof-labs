@@ -85,7 +85,7 @@ class LogisticRegression(LinearModel):
         label_probabilities = np.exp(label_scores) / np.sum(np.exp(label_scores))
         self.W += learning_rate * (y_one_hot - label_probabilities) * x_i[None, :]
 
-
+ 
 
 class MLP(object):
     # Q3.2b. This MLP skeleton code allows the MLP to be used in place of the
@@ -111,7 +111,6 @@ class MLP(object):
         for i in range(num_layers):
             h = x if i == 0 else hiddens[i-1]
             z = weights[i].dot(h) + biases[i]
-            
             if i < num_layers-1:  
                 hiddens.append(ReLU(z))
         output = z
@@ -139,7 +138,7 @@ class MLP(object):
         num_layers = len(weights)
         g = ReLU
 
-        probs = probs = np.exp(output) / np.sum(np.exp(output))
+        probs = np.exp(output) / np.sum(np.exp(output))
         grad_z = probs - y  
         grad_weights = []
         grad_biases = []
@@ -264,7 +263,9 @@ def main():
         )
         valid_accs.append(model.evaluate(dev_X, dev_y))
         test_accs.append(model.evaluate(test_X, test_y))
+        print('Valid acc: %.4f' % (valid_accs[-1]))
 
+    print('Final Test acc: %.4f' % (model.evaluate(test_X, test_y)))
     # plot
     plot(epochs, valid_accs, test_accs)
 
