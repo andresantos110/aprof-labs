@@ -13,7 +13,7 @@ import torchvision
 from matplotlib import pyplot as plt
 import numpy as np
 
-import utils 
+import utils
 
 class CNN(nn.Module):
     
@@ -26,12 +26,8 @@ class CNN(nn.Module):
         https://pytorch.org/docs/stable/nn.html
         """
         super(CNN, self).__init__()
-        self.conv1 = nn.Conv2d(1, 8, kernel_size=5, padding=2)
-        self.conv2 = nn.Conv2d(8, 16, kernel_size=3)
-        self.conv2_drop = nn.Dropout2d(p = dropout_prob)
-        self.fc1 = nn.Linear(576, 600)   
-        self.fc2 = nn.Linear(600, 120)
-        self.fc3 = nn.Linear(120, 10)
+        
+        # Implement me!
         
     def forward(self, x):
         """
@@ -49,32 +45,7 @@ class CNN(nn.Module):
         forward pass -- this is enough for it to figure out how to do the
         backward pass.
         """
-        x = x.view(-1,1,28,28)
-        #batch_size = 8, images 28x28 =>
-        #   x.shape = [8, 1, 28, 28]
-        x = F.relu(F.max_pool2d(self.conv1(x), 2, 2)) 
-        # Convolution with 5x5 filter without padding and 8 channels =>
-        #   x.shape = [8, 8, 28, 28] since 28 = (28 - 5 + 2 *2)+ 1
-        # Max pooling with stride 2 =>
-        #   x.shape = [8, 8, 14, 14] since 14 = (28 - 2)/2 + 1
-        
-        x = F.relu(F.max_pool2d(self.conv2(x), 2, 2))
-        # Convolution with 3x3 filter without padding and 16 channels =>
-        #   x.shape = [8, 16, 12, 12] since 12 = 14 - 3 + 1 
-        # Max pooling with stride 2 =>
-        #   x.shape = [8, 16, 6, 6] since 6 = (12 - 2)/2 + 1
-
-        x = x.view(-1, 576)
-        # Reshape =>
-        #  x.shape = [8, 576] since 576 = 16 * 6 * 6 
-
-        x = F.relu(self.fc1(x))
-        x = F.dropout(x, training=self.training)
-        x = F.relu(self.fc2(x))
-
-        x = F.log_softmax(x, dim=1)
-
-        return x
+        raise NotImplementedError
 
 def train_batch(X, y, model, optimizer, criterion, **kwargs):
     """
@@ -94,14 +65,7 @@ def train_batch(X, y, model, optimizer, criterion, **kwargs):
     This function should return the loss (tip: call loss.item()) to get the
     loss as a numerical value that is not part of the computation graph.
     """
-    
-    optimizer.zero_grad()
-    output = model(X)
-    loss = criterion(output, y)
-    loss.backward()
-    optimizer.step()
-    return loss.item()
-
+    raise NotImplementedError
 
 def predict(model, X):
     """X (n_examples x n_features)"""
