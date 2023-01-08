@@ -131,8 +131,11 @@ class Encoder(nn.Module):
         #   (after passing them to the LSTM)
         #############################################
         
-        emb = self.embedding(src)
-        enc_output, hidden_n = self.lstm(emb, lengths)
+        emb = self.embedding(src)  
+        emb = self.dropout(emb)  
+        packed = torch.nn.utils.rnn.pack_padded_sequence(emb, lengths, batch_first=True, enforce_sorted=False)
+        enc_output, hidden_n = self.lstm(packed, lengths)
+        enc_output, _ = torch.nn.utils.rnn.pad_packed_sequence(enc_output, batch_first=True, enforce_sorted=False)
         final_hidden = self._reshape_hidden(hidden_n)
 
         #############################################
@@ -216,6 +219,7 @@ class Decoder(nn.Module):
     
 
         emb = self.embedding(tgt)
+        emb = self.dropout(emb)
         outputs, hidden_n = self.lstm(emb, src_lengths)
 
         if self.attn is not None:
