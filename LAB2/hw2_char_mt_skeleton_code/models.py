@@ -47,8 +47,11 @@ class Attention(nn.Module):
         # - Use torch.tanh to do the tanh
         # - Use torch.masked_fill to do the masking of the padding tokens
         #############################################
- 
-        scores = torch.bmm( torch.matmul(self.linear_in.T,query) , encoder_outputs)
+
+        print(torch.transpose(self.linear_in.weight,0,1).shape)
+        print(query.shape)
+
+        scores = torch.bmm(torch.matmul(torch.transpose(self.linear_in.weight,0,1),query) , encoder_outputs)
         
         """masking"""
 
@@ -132,12 +135,12 @@ class Encoder(nn.Module):
         #############################################
         
         emb = self.embedding(src)  
-        emb = self.dropout(emb)  
+        emb = self.dropout(emb) 
         packed = torch.nn.utils.rnn.pack_padded_sequence(emb, lengths, batch_first=True, enforce_sorted=False)
-        enc_output, hidden_n = self.lstm(packed, lengths)
-        enc_output, _ = torch.nn.utils.rnn.pad_packed_sequence(enc_output, batch_first=True, enforce_sorted=False)
+        enc_output, hidden_n = self.lstm(packed)
+        enc_output, _ = torch.nn.utils.rnn.pad_packed_sequence(enc_output, batch_first=True)
         final_hidden = self._reshape_hidden(hidden_n)
-
+        
         #############################################
         # END OF YOUR CODE
         #############################################
@@ -204,8 +207,7 @@ class Decoder(nn.Module):
         # bidirectional encoder outputs are concatenated, so we may need to
         # reshape the decoder states to be of size (num_layers, batch_size, 2*hidden_size)
         # if they are of size (num_layers*num_directions, batch_size, hidden_size)
-        if dec_state[0].shape[0] == 2:
-            dec_state = reshape_state(dec_state)
+        
 
         #############################################
         # TODO: Implement the forward pass of the decoder
@@ -217,10 +219,18 @@ class Decoder(nn.Module):
         # - Add this somewhere in the decoder loop when you implement the attention mechanism in 3.2:
         #############################################
     
+        if dec_state[0].shape[0] == 2:
+            dec_state = reshape_state(dec_state)
 
         emb = self.embedding(tgt)
         emb = self.dropout(emb)
-        outputs, hidden_n = self.lstm(emb, src_lengths)
+        
+        outputs, dec_state = self.lstm(emb,dec_state)
+
+        outputs = self.dropout(outputs)
+
+        if self.training is True:
+            outputs = outputs[:, :-1,:]
 
         if self.attn is not None:
             outputs = self.attn(
@@ -228,8 +238,6 @@ class Decoder(nn.Module):
                 encoder_outputs,
                 src_lengths,
             )
-
-        #flat_output = 
 
         #############################################
         # END OF YOUR CODE
