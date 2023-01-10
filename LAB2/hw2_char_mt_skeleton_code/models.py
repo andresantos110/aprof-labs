@@ -48,28 +48,23 @@ class Attention(nn.Module):
         # - Use torch.masked_fill to do the masking of the padding tokens
         #############################################
 
-        print(torch.transpose(self.linear_in.weight,0,1).shape)
-        print(query.shape)
+        scores = torch.bmm((self.linear_in(query)) , torch.transpose(encoder_outputs,1,2))
 
-        scores = torch.bmm(torch.matmul(torch.transpose(self.linear_in.weight,0,1),query) , encoder_outputs)
-        
         """masking"""
 
         src_seq_mask = ~self.sequence_mask(src_lengths)
 
-        scores.masked_fill_(src_seq_mask.view(scores.size()), -float('Inf'))
+        scores.masked_fill_(src_seq_mask.unsqueeze(1), -float('Inf'))
         
         """attention calculation"""
 
-        #attn = torch.nn.functional.softmax(scores)
-        coco = torch.softmax(dim=1)
-        prob = coco(scores)
+        prob = torch.softmax(scores,dim=2)
         
         """context calculation"""
 
         context = torch.bmm(prob, encoder_outputs)
 
-        attn_out = torch.tanh(torch.matmul(self.linear_out, torch.cat((context, query), dim=2)))
+        attn_out = torch.tanh(self.linear_out(torch.cat((context, query), dim=2)))
 
         #############################################
         # END OF YOUR CODE
@@ -221,16 +216,14 @@ class Decoder(nn.Module):
     
         if dec_state[0].shape[0] == 2:
             dec_state = reshape_state(dec_state)
+        
+        if tgt.size(1) > 1:
+            tgt = tgt[:, :-1]   
 
         emb = self.embedding(tgt)
         emb = self.dropout(emb)
         
         outputs, dec_state = self.lstm(emb,dec_state)
-
-        outputs = self.dropout(outputs)
-
-        if self.training is True:
-            outputs = outputs[:, :-1,:]
 
         if self.attn is not None:
             outputs = self.attn(
@@ -238,6 +231,13 @@ class Decoder(nn.Module):
                 encoder_outputs,
                 src_lengths,
             )
+
+        outputs = self.dropout(outputs)
+
+        #if self.training is True:
+        #    outputs = outputs[:, :-1,:]
+
+        
 
         #############################################
         # END OF YOUR CODE
