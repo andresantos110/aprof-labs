@@ -26,46 +26,51 @@ class CNN(nn.Module):
         https://pytorch.org/docs/stable/nn.html
         """
         super(CNN, self).__init__()
-        
-        # Implement me!
+        self.conv1 = nn.Conv2d(1, 8, kernel_size=5, padding=2)
+        self.conv2 = nn.Conv2d(8, 16, kernel_size=3)
+        self.conv2_drop = nn.Dropout2d(p = dropout_prob)
+        self.fc1 = nn.Linear(576, 600)   
+        self.fc2 = nn.Linear(600, 120)
+        self.fc3 = nn.Linear(120, 10)
         
     def forward(self, x):
-        """
-        x (batch_size x n_channels x height x width): a batch of training 
-        examples
+        
+        x = x.view(-1,1,28,28)
+        #batch_size = 8, images 28x28 =>
+        #   x.shape = [8, 1, 28, 28]
+        x = F.relu(F.max_pool2d(self.conv1(x), 2, 2)) 
+        # Convolution with 5x5 filter without padding and 8 channels =>
+        #   x.shape = [8, 8, 28, 28] since 28 = (28 - 5 + 2 *2)+ 1
+        # Max pooling with stride 2 =>
+        #   x.shape = [8, 8, 14, 14] since 14 = (28 - 2)/2 + 1
+        
+        x = F.relu(F.max_pool2d(self.conv2(x), 2, 2))
+        # Convolution with 3x3 filter without padding and 16 channels =>
+        #   x.shape = [8, 16, 12, 12] since 12 = 14 - 3 + 1 
+        # Max pooling with stride 2 =>
+        #   x.shape = [8, 16, 6, 6] since 6 = (12 - 2)/2 + 1
 
-        Every subclass of nn.Module needs to have a forward() method. forward()
-        describes how the module computes the forward pass. This method needs 
-        to perform all the computation needed to compute the output from x. 
-        This will include using various hidden layers, pointwise nonlinear 
-        functions, and dropout. Don't forget to use logsoftmax function before 
-        the return
+        x = x.view(-1, 576)
+        # Reshape =>
+        #  x.shape = [8, 576] since 576 = 16 * 6 * 6 
 
-        One nice thing about pytorch is that you only need to define the
-        forward pass -- this is enough for it to figure out how to do the
-        backward pass.
-        """
-        raise NotImplementedError
+        x = F.relu(self.fc1(x))
+        x = F.dropout(x, training=self.training)
+        x = F.relu(self.fc2(x))
+
+        x = F.log_softmax(x, dim=1)
+
+        return x
 
 def train_batch(X, y, model, optimizer, criterion, **kwargs):
-    """
-    X (n_examples x n_features)
-    y (n_examples): gold labels
-    model: a PyTorch defined model
-    optimizer: optimizer used in gradient step
-    criterion: loss function
+    
+    optimizer.zero_grad()
+    output = model(X)
+    loss = criterion(output, y)
+    loss.backward()
+    optimizer.step()
+    return loss.item()
 
-    To train a batch, the model needs to predict outputs for X, compute the
-    loss between these predictions and the "gold" labels y using the criterion,
-    and compute the gradient of the loss with respect to the model parameters.
-
-    Check out https://pytorch.org/docs/stable/optim.html for examples of how
-    to use an optimizer object to update the parameters.
-
-    This function should return the loss (tip: call loss.item()) to get the
-    loss as a numerical value that is not part of the computation graph.
-    """
-    raise NotImplementedError
 
 def predict(model, X):
     """X (n_examples x n_features)"""
@@ -135,7 +140,7 @@ def main():
     parser.add_argument('-l2_decay', type=float, default=0)
     parser.add_argument('-dropout', type=float, default=0.8)
     parser.add_argument('-optimizer',
-                        choices=['sgd', 'adam'], default='sgd')
+                        choices=['sgd', 'adam'], default='adam')
     
     opt = parser.parse_args()
 
