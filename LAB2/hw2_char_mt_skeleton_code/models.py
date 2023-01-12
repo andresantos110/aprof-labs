@@ -134,6 +134,7 @@ class Encoder(nn.Module):
         packed = torch.nn.utils.rnn.pack_padded_sequence(emb, lengths, batch_first=True, enforce_sorted=False)
         enc_output, hidden_n = self.lstm(packed)
         enc_output, _ = torch.nn.utils.rnn.pad_packed_sequence(enc_output, batch_first=True)
+        enc_output = self.dropout(enc_output)
         final_hidden = self._reshape_hidden(hidden_n)
         
         #############################################
